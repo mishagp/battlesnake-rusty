@@ -1,12 +1,8 @@
-# Battlesnake Rust Starter Project
+# Rusty - A beginner's battlesnake
 
-An official Battlesnake template written in Rust. Get started at [play.battlesnake.com](https://play.battlesnake.com).
+This is my first Battlesnake and significant Rust project! Created from the official [starter-snake-rust](https://github.com/BattlesnakeOfficial/starter-snake-rust) starter project from Battlesnake.
 
-![Battlesnake Logo](https://media.battlesnake.com/social/StarterSnakeGitHubRepos_Rust.png)
-
-This project is a great starting point for anyone wanting to program their first Battlesnake in Rust. It can be run locally or easily deployed to a cloud provider of your choosing. See the [Battlesnake API Docs](https://docs.battlesnake.com/api) for more detail. 
-
-[![Run on Replit](https://repl.it/badge/github/BattlesnakeOfficial/starter-snake-rust)](https://replit.com/@Battlesnake/starter-snake-rust)
+See the [Battlesnake API Docs](https://docs.battlesnake.com/api) for more detail. 
 
 ## Technologies Used
 

@@ -79,6 +79,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "battlesnake-rusty"
+version = "1.0.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "rand",
+ "rocket",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "binascii"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1060,18 +1072,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4564168c00635f88eaed410d5efa8131afa8d8699a612c80c455a0ba05c21045"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "starter-snake-rust"
-version = "1.0.0"
-dependencies = [
- "env_logger",
- "log",
- "rand",
- "rocket",
- "serde",
- "serde_json",
 ]
 
 [[package]]

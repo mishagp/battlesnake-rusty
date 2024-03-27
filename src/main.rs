@@ -6,7 +6,7 @@ use rocket::fairing::AdHoc;
 use rocket::http::Status;
 use rocket::serde::{json::Json, Deserialize};
 use serde::Serialize;
-use serde_json::{Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
 
@@ -24,7 +24,7 @@ pub struct Game {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Board {
-    height: u32,
+    height: i32,
     width: i32,
     food: Vec<Coord>,
     snakes: Vec<Battlesnake>,
@@ -43,7 +43,7 @@ pub struct Battlesnake {
     shout: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Coord {
     x: i32,
     y: i32,
@@ -55,6 +55,25 @@ pub struct GameState {
     turn: i32,
     board: Board,
     you: Battlesnake,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+enum Move {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl Move {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Move::Up => "up",
+            Move::Down => "down",
+            Move::Left => "left",
+            Move::Right => "right",
+        }
+    }
 }
 
 #[get("/")]
@@ -115,7 +134,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(AdHoc::on_response("Server ID Middleware", |_, res| {
             Box::pin(async move {
-                res.set_raw_header("Server", "battlesnake/github/starter-snake-rust");
+                res.set_raw_header("Server", "mishagp/github/battlesnake-rusty");
             })
         }))
         .mount(
