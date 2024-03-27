@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-use crate::{Battlesnake, Board, Game, Move};
+use crate::{Battlesnake, Board, Coord, Game, Move};
 
 pub fn info() -> Value {
     return json!({
@@ -45,6 +45,7 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
     .collect();
 
     let my_head = &you.body[0];
+    let my_body = &you.body;
     let board_width = &board.width;
     let board_height = &board.height;
 
@@ -62,6 +63,28 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
         };
         my_body_quadrant_count[body_part_quadrant - 1] += 1;
     }
+
+    //Get count of my food in each quadrant
+    let mut my_food_quadrant_count = vec![0, 0, 0, 0];
+    for food in &board.food {
+        let food_quadrant = match (food.x < board_width / 2, food.y < board_height / 2) {
+            (true, true) => 1,
+            (true, false) => 2,
+            (false, true) => 3,
+            (false, false) => 4,
+        };
+        my_food_quadrant_count[food_quadrant - 1] += 1;
+    }
+
+    let sorted_food: &mut Vec<Coord> = &mut board.food.clone();
+    sorted_food.sort_by(|a, b| {
+        let a_dist = (a.x - my_head.x).abs() + (a.y - my_head.y).abs();
+        let b_dist = (b.x - my_head.x).abs() + (b.y - my_head.y).abs();
+        a_dist.cmp(&b_dist)
+    });
+
+    let chosen: &Move;
+    let mut shout: &str = "";
 
     if my_head.x <= 1 {
         if my_head.x == 0 {
@@ -92,7 +115,6 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
     }
 
     // Prevent your Battlesnake from colliding with itself
-    let my_body = &you.body;
     for body_part_coord in my_body {
         if body_part_coord.x == my_head.x && body_part_coord.y == my_head.y {
             info!("self collision ruled out");
@@ -150,16 +172,6 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
         .map(|(k, _)| k)
         .collect::<Vec<_>>();
 
-    // TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-    // let mut sorted_food: &mut Vec<Coord> = &mut board.food.clone();
-    // sorted_food.sort_by(|a, b| {
-    //     let a_dist = (a.x - my_head.x).abs() + (a.y - my_head.y).abs();
-    //     let b_dist = (b.x - my_head.x).abs() + (b.y - my_head.y).abs();
-    //     a_dist.cmp(&b_dist)
-    // });
-
-    let chosen: &Move;
-
     // If there is more than one safe move, choose a desirable move which is also a safe move
     if safe_moves.len() > 1 {
         let safe_desirable_moves: &[&Move] = &safe_moves
@@ -171,12 +183,21 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
             // Determine which quadrant has the least body parts
             let mut min_quadrant = 0;
             let mut min_quadrant_count = my_body_quadrant_count[0];
+            let mut max_food_count = 0;
+
             for i in 1..4 {
                 if my_body_quadrant_count[i] < min_quadrant_count {
                     min_quadrant = i;
                     min_quadrant_count = my_body_quadrant_count[i];
+                    max_food_count = 0;
+                } else if my_body_quadrant_count[i] == min_quadrant_count {
+                    if my_food_quadrant_count[i] > max_food_count {
+                        min_quadrant = i;
+                        max_food_count = my_food_quadrant_count[i];
+                    }
                 }
             }
+
             // Choose a move that moves towards min_quadrant
             let mut min_quadrant_moves = vec![];
             for &move_ in safe_desirable_moves {
@@ -204,7 +225,62 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
                 }
             }
             if min_quadrant_moves.len() > 0 {
-                chosen = min_quadrant_moves.choose(&mut rand::thread_rng()).unwrap();
+                // Filter sorted_food to only include food in min_quadrant
+                let mut min_quadrant_food = vec![];
+                for food in sorted_food {
+                    match min_quadrant {
+                        1 => {
+                            if food.x < board_width / 2 && food.y < board_height / 2 {
+                                min_quadrant_food.push(food);
+                            }
+                        }
+                        2 => {
+                            if food.x < board_width / 2 && food.y >= board_height / 2 {
+                                min_quadrant_food.push(food);
+                            }
+                        }
+                        3 => {
+                            if food.x >= board_width / 2 && food.y < board_height / 2 {
+                                min_quadrant_food.push(food);
+                            }
+                        }
+                        4 => {
+                            if food.x >= board_width / 2 && food.y >= board_height / 2 {
+                                min_quadrant_food.push(food);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Choose a move from min_quadrant_moves that moves towards the first food in min_quadrant_food
+                let mut min_quadrant_food_moves = vec![];
+                for &move_ in &min_quadrant_moves {
+                    let (dx, dy) = match move_ {
+                        Move::Up => (0, -1),
+                        Move::Down => (0, 1),
+                        Move::Left => (-1, 0),
+                        Move::Right => (1, 0),
+                    };
+                    let new_head = Coord {
+                        x: my_head.x + dx,
+                        y: my_head.y + dy,
+                    };
+                    if min_quadrant_food.len() > 0 {
+                        let food = &min_quadrant_food[0];
+                        if new_head.x == food.x && new_head.y == food.y {
+                            min_quadrant_food_moves.push(move_);
+                        }
+                    }
+                }
+
+                if min_quadrant_food_moves.len() > 0 {
+                    chosen = min_quadrant_food_moves
+                        .choose(&mut rand::thread_rng())
+                        .unwrap();
+                } else {
+                    chosen = &min_quadrant_moves.choose(&mut rand::thread_rng()).unwrap();
+                }
             } else {
                 chosen = safe_desirable_moves
                     .choose(&mut rand::thread_rng())
@@ -216,7 +292,7 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
         }
     } else {
         if safe_moves.len() == 0 {
-            // We are going to lose so let's just go up
+            shout = "The only winning move is not to play...";
             chosen = &Move::Up;
         } else {
             // Choose a random move from the safe ones
@@ -225,8 +301,15 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
     }
 
     info!("MOVE {}: {}", turn, chosen.as_str());
-    return json!({
-        "move": chosen.as_str(),
-        "shout": "Hack the planet!",
-    });
+    let response = if shout.is_empty() {
+        json!({
+            "move": chosen.as_str(),
+        })
+    } else {
+        json!({
+            "move": chosen.as_str(),
+            "shout": shout,
+        })
+    };
+    return response;
 }
