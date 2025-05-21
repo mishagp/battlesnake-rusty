@@ -118,13 +118,13 @@ fn rocket() -> _ {
     // environment variable. However, Rocket looks at the `ROCKET_PORT` environment variable.
     // If we find a value for `PORT`, we set `ROCKET_PORT` to that value.
     if let Ok(port) = env::var("PORT") {
-        env::set_var("ROCKET_PORT", &port);
+        unsafe { env::set_var("ROCKET_PORT", &port); }
     }
 
     // We default to 'info' level logging. But if the `RUST_LOG` environment variable is set,
     // we keep that value instead.
     if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info");
+        unsafe { env::set_var("RUST_LOG", "info"); }
     }
 
     env_logger::init();

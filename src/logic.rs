@@ -1,18 +1,18 @@
 use log::info;
-use rand::seq::SliceRandom;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use rand::prelude::IndexedRandom;
 
 use crate::{Battlesnake, Board, Coord, Game, Move};
 
 pub fn info() -> Value {
-    return json!({
+    json!({
         "apiversion": "1",
         "author": "mishagp",
         "color": "#a72145",
         "head": "silly",
         "tail": "sharp",
-    });
+    })
 }
 
 // start is called when your Battlesnake begins a game
@@ -276,19 +276,19 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
 
                 if min_quadrant_food_moves.len() > 0 {
                     chosen = min_quadrant_food_moves
-                        .choose(&mut rand::thread_rng())
+                        .choose(&mut rand::rng())
                         .unwrap();
                 } else {
-                    chosen = &min_quadrant_moves.choose(&mut rand::thread_rng()).unwrap();
+                    chosen = &min_quadrant_moves.choose(&mut rand::rng()).unwrap();
                 }
             } else {
                 chosen = safe_desirable_moves
-                    .choose(&mut rand::thread_rng())
+                    .choose(&mut rand::rng())
                     .unwrap();
             }
         } else {
             // Choose a random move from the safe ones
-            chosen = safe_moves.choose(&mut rand::thread_rng()).unwrap();
+            chosen = safe_moves.choose(&mut rand::rng()).unwrap();
         }
     } else {
         if safe_moves.len() == 0 {
@@ -296,7 +296,7 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
             chosen = &Move::Up;
         } else {
             // Choose a random move from the safe ones
-            chosen = safe_moves.choose(&mut rand::thread_rng()).unwrap();
+            chosen = safe_moves.choose(&mut rand::rng()).unwrap();
         }
     }
 
@@ -311,5 +311,5 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
             "shout": shout,
         })
     };
-    return response;
+    response
 }
