@@ -369,6 +369,18 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
     let board_width = &board.width;
     let board_height = &board.height;
 
+    // Check if we're the longest snake
+    let mut is_longest = true;
+    for snake in &board.snakes {
+        if snake.id != you.id && snake.length >= you.length {
+            is_longest = false;
+            break;
+        }
+    }
+
+    // Check if health is getting low
+    let health_is_low = you.health < 30; // Consider health below 30 as low
+
     //Get count of my body parts in each quadrant
     let mut my_body_quadrant_count = vec![0, 0, 0, 0];
     for body_part_coord in &you.body {
@@ -488,8 +500,9 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
             continue;
         }
 
-        // Evaluate the safety of this move looking ahead 3 moves
-        let safety_score = evaluate_move_safety(board, you, &move_dir, 3);
+        // Evaluate the safety of this move looking ahead n moves
+        // Seems like the sweet spot is 5-8 before it starts to rule out too many moves
+        let safety_score = evaluate_move_safety(board, you, &move_dir, 8);
         move_safety_scores.insert(move_dir, safety_score);
     }
 
@@ -528,6 +541,59 @@ pub fn get_move(_game: &Game, turn: &i32, board: &Board, you: &Battlesnake) -> V
             .iter()
             .filter(|&m| desirable_moves.contains(&m))
             .collect::<Vec<_>>();
+
+        // Prioritize moves towards food if we're not the longest snake or health is low
+        if (!is_longest || health_is_low) && sorted_food.len() > 0 && safe_desirable_moves.len() > 0 {
+            info!("Prioritizing food: not longest={}, low health={}", !is_longest, health_is_low);
+
+            // Find moves that bring us closer to the nearest food
+            let nearest_food = &sorted_food[0];
+            let mut food_seeking_moves = Vec::new();
+
+            for &move_ in safe_desirable_moves {
+                let (dx, dy) = match move_ {
+                    Move::Up => (0, 1),
+                    Move::Down => (0, -1),
+                    Move::Left => (-1, 0),
+                    Move::Right => (1, 0),
+                };
+
+                let new_head = Coord {
+                    x: my_head.x + dx,
+                    y: my_head.y + dy,
+                };
+
+                // Calculate current distance to food
+                let current_distance = (my_head.x - nearest_food.x).abs() + (my_head.y - nearest_food.y).abs();
+
+                // Calculate new distance to food after move
+                let new_distance = (new_head.x - nearest_food.x).abs() + (new_head.y - nearest_food.y).abs();
+
+                // If this move brings us closer to food, add it to food_seeking_moves
+                if new_distance < current_distance {
+                    food_seeking_moves.push(move_);
+                }
+
+                // If this move takes us directly to food, prioritize it even more
+                if new_head.x == nearest_food.x && new_head.y == nearest_food.y {
+                    // Return this move immediately
+                    chosen = move_;
+                    info!("Moving directly to food: {}", chosen.as_str());
+                    return json!({
+                        "move": chosen.as_str(),
+                    });
+                }
+            }
+
+            // If we have moves that bring us closer to food, choose one randomly
+            if food_seeking_moves.len() > 0 {
+                chosen = food_seeking_moves.choose(&mut rand::rng()).unwrap();
+                info!("Moving towards food: {}", chosen.as_str());
+                return json!({
+                    "move": chosen.as_str(),
+                });
+            }
+        }
 
         if safe_desirable_moves.len() > 0 {
             // Determine which quadrant has the least body parts
