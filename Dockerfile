@@ -1,4 +1,4 @@
-FROM rust:1.77
+FROM rust:1.87
 
 EXPOSE 8000/tcp
 
